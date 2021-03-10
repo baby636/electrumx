@@ -628,7 +628,7 @@ class SessionManager:
             if group and group.closed():
                 for exc in group.exceptions:
                     if exc:
-                        self.logger.exception(exc)
+                        self.logger.exception(exc_info=exc)
             # Close servers then sessions
             await self._stop_servers(self.servers.keys())
             async with TaskGroup() as group:
