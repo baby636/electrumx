@@ -578,6 +578,7 @@ class SessionManager:
     async def serve(self, notifications, event):
         '''Start the RPC server if enabled.  When the event is triggered,
         start TCP and SSL servers.'''
+        group = None
         try:
             await self._start_servers(service for service in self.env.services
                                       if service.protocol == 'rpc')
@@ -619,12 +620,21 @@ class SessionManager:
                 await group.spawn(self._recalc_concurrency())
                 await group.spawn(self._log_sessions())
                 await group.spawn(self._manage_servers())
+            self.logger.info('task group closed in serve()')
+        except Exception:  # pylint:disable=W0703
+            self.logger.exception('in Exception clause of serve()')
         finally:
+            self.logger.info('in finally clause of serve()')
+            if group and group.closed():
+                for exc in group.exceptions:
+                    if exc:
+                        self.logger.exception(exc)
             # Close servers then sessions
             await self._stop_servers(self.servers.keys())
             async with TaskGroup() as group:
                 for session in list(self.sessions):
                     await group.spawn(session.close(force_after=1))
+            await sleep(0.05)
 
     def extra_cost(self, session):
         # Note there is no guarantee that session is still in self.sessions.  Example traceback:
